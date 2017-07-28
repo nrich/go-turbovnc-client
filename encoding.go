@@ -85,6 +85,20 @@ func (s SubsampleLevel) Read(c *ClientConn, rect *Rectangle, r io.Reader) (Encod
 	return s, errors.NotImplementedf("fine quality level is a pseudo-encoding")
 }
 
+type NewFBSize int32
+
+func (s NewFBSize) Size() int {
+	return 0
+}
+
+func (s NewFBSize) Type() int32 {
+	return -223
+}
+
+func (s NewFBSize) Read(c *ClientConn, rect *Rectangle, r io.Reader) (Encoding, error) {
+	return s,nil
+}
+
 // RawEncoding is raw pixel data sent by the server.
 //
 // See RFC 6143 Section 7.7.1
