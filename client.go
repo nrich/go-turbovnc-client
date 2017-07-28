@@ -166,6 +166,34 @@ func (c *ClientConn) CutText(text string) error {
 	return nil
 }
 
+func (c *ClientConn) SetDesktopSize(numScreens int, w,h uint16) error {
+    c.send.Lock()
+    defer c.send.Unlock()
+
+    buf := bytes.NewBuffer(make([]byte, 0, 6))
+
+    data := []interface{}{
+	    uint8(251),		//CARD8 type;                 /* always rfbSetDesktopSize */
+	    uint8(0),		//CARD8 pad1;
+	    w,			//CARD16 w;
+	    h,			//CARD16 h;
+	    uint8(numScreens),	//CARD8 numScreens
+	    uint8(0),		//CARD8 pad2;
+    }
+
+    for _, val := range data {
+	    if err := binary.Write(buf, binary.BigEndian, val); err != nil {
+		    return err
+	    }
+    }
+
+    if _, err := c.c.Write(buf.Bytes()[0:8]); err != nil {
+	    return err
+    }
+
+    return nil
+}
+
 // FramebufferUpdateRequest requests a framebuffer update from the server.
 // There may be an indefinite time between the request and the actual
 // framebuffer update being received.
