@@ -121,7 +121,7 @@ func (*FramebufferUpdateMessage) Read(c *ClientConn, r io.Reader) (ServerMessage
 
 	delta := (time.Now().UnixNano() - start) / 1000 / 1000
 	if delta > 1 {
-		// log.Infof("Time to parse framebuffer update message: %vms (bytes: %v, rects: %v)", delta, bytes, types)
+		//log.Infof("Time to parse framebuffer update message: %vms (bytes: %v, rects: %v)", delta, bytes, types)
 	}
 
 	return &FramebufferUpdateMessage{rects}, nil
@@ -225,3 +225,49 @@ func (*ServerCutTextMessage) Read(c *ClientConn, r io.Reader) (ServerMessage, er
 
 	return &ServerCutTextMessage{string(textBytes)}, nil
 }
+
+// ServerFence
+type ServerFenceMessage struct {
+    Flags uint32
+    Length byte
+    Payload []byte
+}
+
+func (*ServerFenceMessage) Type() uint8 {
+        return 248
+}
+
+func (*ServerFenceMessage) Read(c *ClientConn, r io.Reader) (ServerMessage, error) {
+	var padding [3]byte
+	if _, err := io.ReadFull(r, padding[:]); err != nil {
+		return nil, err
+	}
+
+        var flags uint32
+        if err := binary.Read(r, binary.BigEndian, &flags); err != nil {
+            return nil, err
+        }
+
+        var length byte
+        if err := binary.Read(r, binary.BigEndian, &length); err != nil {
+            return nil,err
+        }
+
+        payload := make([]byte, length)
+        if _, err := io.ReadFull(r, payload[:]); err != nil {
+            return nil,err
+        }
+
+        return &ServerFenceMessage{Flags:flags, Length:length, Payload:payload}, nil
+}
+
+type EndOfContinuousUpdatesMessage byte
+
+func (*EndOfContinuousUpdatesMessage) Type() uint8 {
+	return 150
+}
+
+func (*EndOfContinuousUpdatesMessage) Read(*ClientConn, io.Reader) (ServerMessage, error) {
+	return new(BellMessage), nil
+}
+

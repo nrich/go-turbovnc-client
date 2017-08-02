@@ -170,7 +170,7 @@ func (c *ClientConn) SetDesktopSize(numScreens int, w,h uint16) error {
     c.send.Lock()
     defer c.send.Unlock()
 
-    buf := bytes.NewBuffer(make([]byte, 0, 6))
+    buf := bytes.NewBuffer(make([]byte, 0, 8))
 
     data := []interface{}{
 	    uint8(251),		//CARD8 type;                 /* always rfbSetDesktopSize */
@@ -188,6 +188,69 @@ func (c *ClientConn) SetDesktopSize(numScreens int, w,h uint16) error {
     }
 
     if _, err := c.c.Write(buf.Bytes()[0:8]); err != nil {
+	    return err
+    }
+
+    return nil
+}
+
+func (c *ClientConn) ClientFence(flags uint32, isreply bool, p []byte) error {
+    c.send.Lock()
+    defer c.send.Unlock()
+
+    buf := bytes.NewBuffer(make([]byte, 0, 9))
+
+    if isreply {
+        flags |= 0x80000000
+    } else {
+        flags = flags &^ 0x80000000
+    }
+
+    data := []interface{}{
+            uint8(248),         //CARD8 type;
+            uint8(0),           //CARD8 pad1;
+            uint8(0),           //CARD8 pad2;
+            uint8(0),           //CARD8 pad3;
+            flags,              //CARD32 flags;
+            uint8(len(p)),      //CARD8 length
+            p,
+    }
+
+    for _, val := range data {
+            if err := binary.Write(buf, binary.BigEndian, val); err != nil {
+                    return err
+            }
+    }
+
+    if _, err := c.c.Write(buf.Bytes()[0:9+len(p)]); err != nil {
+            return err
+    }
+
+    return nil
+}
+
+func (c *ClientConn) EnableContinuousUpdates(enabled bool, x,y,w,h uint16) error {
+    c.send.Lock()
+    defer c.send.Unlock()
+
+    buf := bytes.NewBuffer(make([]byte, 0, 10))
+
+    data := []interface{}{
+	    uint8(150),		//CARD8 type
+	    uint8(1),	//CARD8 enabled
+	    x,			//CARD16 x
+	    y,			//CARD16 y
+	    w,			//CARD16 w
+	    h,			//CARD16 h
+    }
+
+    for _, val := range data {
+	    if err := binary.Write(buf, binary.BigEndian, val); err != nil {
+		    return err
+	    }
+    }
+
+    if _, err := c.c.Write(buf.Bytes()[0:10]); err != nil {
 	    return err
     }
 
@@ -578,6 +641,8 @@ func (c *ClientConn) mainLoop() {
 		new(SetColorMapEntriesMessage),
 		new(BellMessage),
 		new(ServerCutTextMessage),
+                new(ServerFenceMessage),
+                new(EndOfContinuousUpdatesMessage),
 	}
 
 	for _, msg := range defaultMessages {

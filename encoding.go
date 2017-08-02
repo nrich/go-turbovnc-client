@@ -85,18 +85,47 @@ func (s SubsampleLevel) Read(c *ClientConn, rect *Rectangle, r io.Reader) (Encod
 	return s, errors.NotImplementedf("fine quality level is a pseudo-encoding")
 }
 
-type NewFBSize int32
+type ContinuousUpdates int32
 
-func (s NewFBSize) Size() int {
+func (cu ContinuousUpdates) Size() int {
 	return 0
 }
 
-func (s NewFBSize) Type() int32 {
+func (cu ContinuousUpdates) Type() int32 {
+	return -313
+}
+
+func (cu ContinuousUpdates) Read(c *ClientConn, rect *Rectangle, r io.Reader) (Encoding, error) {
+	return nil, errors.NotImplementedf("continuous updates is a pseudo-encoding")
+}
+
+type Fence int32
+
+func (f Fence) Size() int {
+	return 0
+}
+
+func (f Fence) Type() int32 {
+	return -312
+}
+
+func (f Fence) Read(c *ClientConn, rect *Rectangle, r io.Reader) (Encoding, error) {
+	return nil, errors.NotImplementedf("fence is a pseudo-encoding")
+}
+
+
+type NewFBSize int32
+
+func (n NewFBSize) Size() int {
+	return 0
+}
+
+func (n NewFBSize) Type() int32 {
 	return -223
 }
 
-func (s NewFBSize) Read(c *ClientConn, rect *Rectangle, r io.Reader) (Encoding, error) {
-	return s,nil
+func (n NewFBSize) Read(c *ClientConn, rect *Rectangle, r io.Reader) (Encoding, error) {
+	return n,nil
 }
 
 // RawEncoding is raw pixel data sent by the server.
