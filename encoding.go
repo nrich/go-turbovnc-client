@@ -128,6 +128,74 @@ func (n NewFBSize) Read(c *ClientConn, rect *Rectangle, r io.Reader) (Encoding, 
 	return n,nil
 }
 
+type RichCursor struct {
+    Colors []Color
+    Mask []byte
+}
+
+func (rc RichCursor) Size() int {
+	return 0
+}
+
+func (rc RichCursor) Type() int32 {
+	return -239
+}
+
+func (rc RichCursor) Read(c *ClientConn, rect *Rectangle, r io.Reader) (Encoding, error) {
+	var err error
+
+/*
+        var byteOrder binary.ByteOrder = binary.LittleEndian
+        if c.PixelFormat.BigEndian {
+                byteOrder = binary.BigEndian
+        }
+*/
+
+	dataLen := rect.Width * rect.Height
+	maskLen := ((rect.Width + 7) / 8) * rect.Height
+	data := make([]byte, dataLen * (uint16(c.PixelFormat.BPP)/8))
+	mask := make([]byte, maskLen)
+
+	colors := make([]Color, dataLen)
+
+	_, err = io.ReadFull(r, data)
+	if err != nil {
+                return nil, err
+	}
+
+/*
+	for i := uint16(0); i < dataLen; i++ {
+		var rawPixel uint32
+		var color Color
+
+		if c.PixelFormat.BPP == 8 {
+			rawPixel = uint32(data[i])
+		} else if c.PixelFormat.BPP == 16 {
+			rawPixel = uint32(byteOrder.Uint16(data[i]))
+		} else if c.PixelFormat.BPP == 32 {
+			rawPixel = byteOrder.Uint32(data[i])
+		}
+
+		if c.PixelFormat.TrueColor {
+			color.R = uint8((rawPixel >> c.PixelFormat.RedShift) & uint32(c.PixelFormat.RedMax))
+			color.G = uint8((rawPixel >> c.PixelFormat.GreenShift) & uint32(c.PixelFormat.GreenMax))
+			color.B = uint8((rawPixel >> c.PixelFormat.BlueShift) & uint32(c.PixelFormat.BlueMax))
+		} else {
+			color = c.ColorMap[rawPixel]
+		}
+
+		colors[i] = color
+	}
+*/
+
+	_, err = io.ReadFull(r, mask)
+	if err != nil {
+                return nil, err
+	}
+
+	return &RichCursor{colors, mask}, nil
+}
+
 // RawEncoding is raw pixel data sent by the server.
 //
 // See RFC 6143 Section 7.7.1

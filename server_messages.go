@@ -93,11 +93,11 @@ func (*FramebufferUpdateMessage) Read(c *ClientConn, r io.Reader) (ServerMessage
 			}
 		}
 
-        // Defend against corrupt rectangles before we try to allocate memory.
-        // In the encoding readers we compute int(Width) * int(Height), which will overflow if Width*Height >= (1<<31)
-        if int(rect.X) > 5120 || int(rect.Y) > 2880 || int(rect.Width) > 5120 || int(rect.Height) > 2880 {
-            return nil, errors.Errorf("excessive rectangle origin %dx%d size %dx%d encoding %v", int(rect.X), int(rect.Y), int(rect.Width), int(rect.Height), encodingType);
-        }
+		// Defend against corrupt rectangles before we try to allocate memory.
+		// In the encoding readers we compute int(Width) * int(Height), which will overflow if Width*Height >= (1<<31)
+		if int(rect.X) > 5120 || int(rect.Y) > 2880 || int(rect.Width) > 5120 || int(rect.Height) > 2880 {
+			return nil, errors.Errorf("excessive rectangle origin %dx%d size %dx%d encoding %v", int(rect.X), int(rect.Y), int(rect.Width), int(rect.Height), encodingType);
+		}
 
 		enc, ok := encMap[encodingType]
 		if !ok {
