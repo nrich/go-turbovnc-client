@@ -141,52 +141,56 @@ func (rc RichCursor) Type() int32 {
 	return -239
 }
 
-func (rc RichCursor) Read(c *ClientConn, rect *Rectangle, r io.Reader) (Encoding, error) {
+func (*RichCursor) Read(c *ClientConn, rect *Rectangle, r io.Reader) (Encoding, error) {
 	var err error
+        bytesPerPixel := c.PixelFormat.BPP / 8
 
-/*
+        // Various housekeeping helpers
+        pixelBytes := make([]uint8, bytesPerPixel)
         var byteOrder binary.ByteOrder = binary.LittleEndian
         if c.PixelFormat.BigEndian {
                 byteOrder = binary.BigEndian
         }
-*/
 
-	dataLen := rect.Width * rect.Height
 	maskLen := ((rect.Width + 7) / 8) * rect.Height
-	data := make([]byte, dataLen * (uint16(c.PixelFormat.BPP)/8))
 	mask := make([]byte, maskLen)
 
-	colors := make([]Color, dataLen)
+        // Output buffer
+        colors := make([]Color, rect.Area())
 
-	_, err = io.ReadFull(r, data)
-	if err != nil {
+        // Read all needed bytes: this improves performance so we
+        // don't have to do piecemeal unbuffered reads.
+        buf := make([]byte, rect.Area()*int(bytesPerPixel))
+        if _, err := io.ReadFull(r, buf); err != nil {
                 return nil, err
-	}
+        }
+        br := bytes.NewBuffer(buf)
 
-/*
-	for i := uint16(0); i < dataLen; i++ {
-		var rawPixel uint32
-		var color Color
+        for y := uint16(0); y < rect.Height; y++ {
+                for x := uint16(0); x < rect.Width; x++ {
+                        if _, err := io.ReadFull(br, pixelBytes); err != nil {
+                                return nil, err
+                        }
 
-		if c.PixelFormat.BPP == 8 {
-			rawPixel = uint32(data[i])
-		} else if c.PixelFormat.BPP == 16 {
-			rawPixel = uint32(byteOrder.Uint16(data[i]))
-		} else if c.PixelFormat.BPP == 32 {
-			rawPixel = byteOrder.Uint32(data[i])
-		}
+                        var rawPixel uint32
+                        if c.PixelFormat.BPP == 8 {
+                                rawPixel = uint32(pixelBytes[0])
+                        } else if c.PixelFormat.BPP == 16 {
+                                rawPixel = uint32(byteOrder.Uint16(pixelBytes))
+                        } else if c.PixelFormat.BPP == 32 {
+                                rawPixel = byteOrder.Uint32(pixelBytes)
+                        }
 
-		if c.PixelFormat.TrueColor {
-			color.R = uint8((rawPixel >> c.PixelFormat.RedShift) & uint32(c.PixelFormat.RedMax))
-			color.G = uint8((rawPixel >> c.PixelFormat.GreenShift) & uint32(c.PixelFormat.GreenMax))
-			color.B = uint8((rawPixel >> c.PixelFormat.BlueShift) & uint32(c.PixelFormat.BlueMax))
-		} else {
-			color = c.ColorMap[rawPixel]
-		}
-
-		colors[i] = color
-	}
-*/
+                        color := &colors[int(y)*int(rect.Width)+int(x)]
+                        if c.PixelFormat.TrueColor {
+                                color.R = uint8((rawPixel >> c.PixelFormat.RedShift) & uint32(c.PixelFormat.RedMax))
+                                color.G = uint8((rawPixel >> c.PixelFormat.GreenShift) & uint32(c.PixelFormat.GreenMax))
+                                color.B = uint8((rawPixel >> c.PixelFormat.BlueShift) & uint32(c.PixelFormat.BlueMax))
+                        } else {
+                                *color = c.ColorMap[rawPixel]
+                        }
+                }
+        }
 
 	_, err = io.ReadFull(r, mask)
 	if err != nil {
