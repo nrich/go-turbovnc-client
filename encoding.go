@@ -85,47 +85,53 @@ func (s SubsampleLevel) Read(c *ClientConn, rect *Rectangle, r io.Reader) (Encod
 	return s, errors.NotImplementedf("fine quality level is a pseudo-encoding")
 }
 
-type ContinuousUpdates int32
+type ContinuousUpdates struct {
 
-func (cu ContinuousUpdates) Size() int {
+}
+
+func (*ContinuousUpdates) Size() int {
 	return 0
 }
 
-func (cu ContinuousUpdates) Type() int32 {
+func (*ContinuousUpdates) Type() int32 {
 	return -313
 }
 
-func (cu ContinuousUpdates) Read(c *ClientConn, rect *Rectangle, r io.Reader) (Encoding, error) {
+func (*ContinuousUpdates) Read(c *ClientConn, rect *Rectangle, r io.Reader) (Encoding, error) {
 	return nil, errors.NotImplementedf("continuous updates is a pseudo-encoding")
 }
 
-type Fence int32
+type Fence struct {
 
-func (f Fence) Size() int {
+}
+
+func (*Fence) Size() int {
 	return 0
 }
 
-func (f Fence) Type() int32 {
+func (*Fence) Type() int32 {
 	return -312
 }
 
-func (f Fence) Read(c *ClientConn, rect *Rectangle, r io.Reader) (Encoding, error) {
+func (*Fence) Read(c *ClientConn, rect *Rectangle, r io.Reader) (Encoding, error) {
 	return nil, errors.NotImplementedf("fence is a pseudo-encoding")
 }
 
 
-type NewFBSize int32
+type NewFBSize struct {
 
-func (n NewFBSize) Size() int {
+}
+
+func (*NewFBSize) Size() int {
 	return 0
 }
 
-func (n NewFBSize) Type() int32 {
+func (*NewFBSize) Type() int32 {
 	return -223
 }
 
-func (n NewFBSize) Read(c *ClientConn, rect *Rectangle, r io.Reader) (Encoding, error) {
-	return n,nil
+func (*NewFBSize) Read(c *ClientConn, rect *Rectangle, r io.Reader) (Encoding, error) {
+	return &NewFBSize{}, nil
 }
 
 type RichCursor struct {
@@ -299,7 +305,7 @@ func (z *ZRLEEncoding) Read(c *ClientConn, rect *Rectangle, r io.Reader) (Encodi
 	}
 
 	// It's now safe to start reading other ZRLE messages if desired
-	log.Debugf("expanded zlib: %d bytes -> %d bytes", len(compressed), len(inflated))
+	//log.Debugf("expanded zlib: %d bytes -> %d bytes", len(compressed), len(inflated))
 
 	// TODO: other format checks here
 	if c.PixelFormat.BPP < 24 {
@@ -717,7 +723,7 @@ func (t *TightEncoding) Read(c *ClientConn, rect *Rectangle, r io.Reader) (Encod
 		//  +------+--------------+------------------+
 		readFilterID := compressionControl>>6 == 1
 		stream := compressionControl >> 4 & 0x03
-		log.Debugf("BasicCompression")
+		//log.Debugf("BasicCompression")
 		return t.readBasicCompression(c, rect, r, readFilterID, stream)
 	}
 
@@ -737,7 +743,7 @@ func (t *TightEncoding) Read(c *ClientConn, rect *Rectangle, r io.Reader) (Encod
 	switch compressionControl >> 4 {
 	// FillCompression
 	case 8:
-		log.Debugf("FillCompression")
+		//log.Debugf("FillCompression")
 		// If the compression type is FillCompression, then the only
 		// pixel value follows, in TPIXEL format. This value applies to
 		// all pixels of the rectangle.
@@ -753,7 +759,7 @@ func (t *TightEncoding) Read(c *ClientConn, rect *Rectangle, r io.Reader) (Encod
 		return &TightEncoding{Colors: colors, size: t.size}, nil
 	// JpegCompression
 	case 9:
-		log.Debugf("JpegCompression")
+		//log.Debugf("JpegCompression")
 		// If the compression type is JpegCompression, the following data
 		// stream looks like this:
 		//
@@ -821,11 +827,11 @@ func (t *TightEncoding) readBasicCompression(c *ClientConn, rect *Rectangle, r i
 	//  +--------------+------+---------+------------------------+
 	//  |              |      | 2       | GradientFilter         |
 	//  +--------------+------+---------+------------------------+
-	log.Debug("stream: ", stream)
+	//log.Debug("stream: ", stream)
 	switch filterID {
 	// CopyFilter
 	case 0:
-		log.Debug("CopyFilter")
+		//log.Debug("CopyFilter")
 		// When the CopyFilter is active, raw pixel values in TPIXEL
 		// format will be compressed.
 		size := rect.Area() * 3
@@ -842,7 +848,7 @@ func (t *TightEncoding) readBasicCompression(c *ClientConn, rect *Rectangle, r i
 		return &TightEncoding{Colors: append([]Color{}, colors...), size: t.size}, err
 	// PaletteFilter
 	case 1:
-		log.Debug("PaletteFilter")
+		//log.Debug("PaletteFilter")
 		// The PaletteFilter converts true-color pixel data to indexed
 		// colors and a palette which can consist of 2..256 colors.
 		//
@@ -905,7 +911,7 @@ func (t *TightEncoding) readBasicCompression(c *ClientConn, rect *Rectangle, r i
 		return &TightEncoding{Colors: colors, size: t.size}, nil
 	// GradientFilter
 	case 2:
-		log.Debug("GradientFilter")
+		//log.Debug("GradientFilter")
 		// Note: The GradientFilter may only be used when bits-per-
 		// pixel is either 16 or 32.
 		if c.PixelFormat.BPP != 16 && c.PixelFormat.BPP != 32 {
