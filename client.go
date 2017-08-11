@@ -194,17 +194,11 @@ func (c *ClientConn) SetDesktopSize(numScreens int, w,h uint16) error {
     return nil
 }
 
-func (c *ClientConn) ClientFence(flags uint32, isreply bool, p []byte) error {
+func (c *ClientConn) ClientFence(flags uint32, p []byte) error {
     c.send.Lock()
     defer c.send.Unlock()
 
     buf := bytes.NewBuffer(make([]byte, 0, 9))
-
-    if isreply {
-        flags |= 0x80000000
-    } else {
-        flags = flags &^ 0x80000000
-    }
 
     data := []interface{}{
             uint8(248),         //CARD8 type;
