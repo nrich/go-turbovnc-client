@@ -149,9 +149,37 @@ func (*NewFBSize) Read(c *ClientConn, rect *Rectangle, r io.Reader) (Encoding, e
 	return &NewFBSize{}, nil
 }
 
+type DesktopName struct {
+	Length uint32
+	Name string
+}
+
+func (*DesktopName) Size() int {
+        return 0
+}
+
+func (*DesktopName) Type() int32 {
+        return -307
+}
+
+func (*DesktopName) Read(c *ClientConn, rect *Rectangle, r io.Reader) (Encoding, error) {
+        var length uint32
+        if err := binary.Read(r, binary.BigEndian, &length); err != nil {
+                return nil, err
+        }
+
+	name := make([]byte, length)
+        if _, err := io.ReadFull(r, name); err != nil {
+                return nil, err
+        }
+
+        return &DesktopName{length, string(name[:])}, nil
+}
+
+
 type RichCursor struct {
-    Colors []Color
-    Mask []byte
+	Colors []Color
+	Mask []byte
 }
 
 func (rc RichCursor) Size() int {
