@@ -117,6 +117,21 @@ func (*Fence) Read(c *ClientConn, rect *Rectangle, r io.Reader) (Encoding, error
 	return nil, errors.NotImplementedf("fence is a pseudo-encoding")
 }
 
+type LastRect struct {
+
+}
+
+func (*LastRect) Size() int {
+	return 0
+}
+
+func (*LastRect) Type() int32 {
+	return -224
+}
+
+func (*LastRect) Read(c *ClientConn, rect *Rectangle, r io.Reader) (Encoding, error) {
+	return &LastRect{}, nil
+}
 
 type NewFBSize struct {
 

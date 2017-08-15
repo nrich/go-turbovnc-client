@@ -56,7 +56,9 @@ func (*FramebufferUpdateMessage) Read(c *ClientConn, r io.Reader) (ServerMessage
 	if err := binary.Read(r, binary.BigEndian, &numRects); err != nil {
 		return nil, err
 	}
-	if numRects > 1000 {
+
+	// 65535 if LastRect is enabled
+	if numRects > 1000  && numRects != 65535 {
 	    return nil, errors.Errorf("excessive rectangle count %d", int(numRects));
 	}
 
@@ -108,6 +110,11 @@ func (*FramebufferUpdateMessage) Read(c *ClientConn, r io.Reader) (ServerMessage
 		rect.Enc, err = enc.Read(c, rect, r)
 		if err != nil {
 			return nil, err
+		}
+
+		if encodingType == -224 {
+			rects = rects[0:i]
+			break
 		}
 	}
 
@@ -268,6 +275,6 @@ func (*EndOfContinuousUpdatesMessage) Type() uint8 {
 }
 
 func (*EndOfContinuousUpdatesMessage) Read(*ClientConn, io.Reader) (ServerMessage, error) {
-	return new(BellMessage), nil
+	return new(EndOfContinuousUpdatesMessage), nil
 }
 
