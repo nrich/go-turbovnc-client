@@ -176,7 +176,6 @@ func (*DesktopName) Read(c *ClientConn, rect *Rectangle, r io.Reader) (Encoding,
         return &DesktopName{length, string(name[:])}, nil
 }
 
-
 type RichCursor struct {
 	Colors []Color
 	Mask []byte
@@ -696,8 +695,8 @@ func (t *TightEncoding) Read(c *ClientConn, rect *Rectangle, r io.Reader) (Encod
 	// rectangle cannot exceed 2048 pixels. If a wider rectangle is
 	// desired, it must be split into several rectangles and each one
 	// should be encoded separately.
-	if rect.Width > 2048 {
-		return nil, errors.Errorf("rectangle too wide: %vpx. tight-encoded rectangles cannot be wider than 2048 pixels.", rect.Width)
+	if rect.Width > 4096 {
+		return nil, errors.Errorf("rectangle too wide: %vpx. tight-encoded rectangles cannot be wider than 4096 pixels.", rect.Width)
 	}
 
 	// To simplify implementation at the cost of full spec compliance,
