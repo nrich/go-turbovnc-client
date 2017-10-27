@@ -1,7 +1,5 @@
 package vncclient
 
-var rootTexture uint32 = 0
-
 const (
     XK_VoidSymbol   = 0xFFFFFF
     XK_BackSpace   = 0xFF08
