@@ -12,6 +12,7 @@ import (
 	"net"
 	"sync"
 	"unicode"
+	errs "errors"
 
 	"github.com/juju/errors"
 	"github.com/openai/go-vncdriver/flexzlib"
@@ -167,88 +168,110 @@ func (c *ClientConn) CutText(text string) error {
 }
 
 func (c *ClientConn) SetDesktopSize(numScreens int, w,h uint16) error {
-    c.send.Lock()
-    defer c.send.Unlock()
+	c.send.Lock()
+	defer c.send.Unlock()
 
-    buf := bytes.NewBuffer(make([]byte, 0, 8))
+	if numScreens != 0 && numScreens != 1 {
+	    return errs.New(fmt.Sprintf("Unsupported number of screens: %d", numScreens))
+	}
 
-    data := []interface{}{
-	    uint8(251),		//CARD8 type;                 /* always rfbSetDesktopSize */
-	    uint8(0),		//CARD8 pad1;
-	    w,			//CARD16 w;
-	    h,			//CARD16 h;
-	    uint8(numScreens),	//CARD8 numScreens
-	    uint8(0),		//CARD8 pad2;
-    }
+	bufsize := 8 + (numScreens * 16)
+	buf := bytes.NewBuffer(make([]byte, 0, bufsize))
 
-    for _, val := range data {
-	    if err := binary.Write(buf, binary.BigEndian, val); err != nil {
-		    return err
-	    }
-    }
+	data := []interface{}{
+		uint8(251),		//CARD8 type;                 /* always rfbSetDesktopSize */
+		uint8(0),		//CARD8 pad1;
+		w,			//CARD16 w;
+		h,			//CARD16 h;
+		uint8(numScreens),	//CARD8 numScreens
+		uint8(0),		//CARD8 pad2;
+	}
 
-    if _, err := c.c.Write(buf.Bytes()[0:8]); err != nil {
-	    return err
-    }
+	for _, val := range data {
+		if err := binary.Write(buf, binary.BigEndian, val); err != nil {
+			return err
+		}
+	}
 
-    return nil
+	if numScreens > 0 {
+		screen := []interface{}{
+			uint32(0),		//id
+			uint16(0),		//x-position
+			uint16(0),		//y-position
+			w,			// width
+			h,			// height
+			uint32(0),		// flags
+		}
+
+		for _, val := range screen {
+			if err := binary.Write(buf, binary.BigEndian, val); err != nil {
+				return err
+			}
+		}
+	}
+
+	if _, err := c.c.Write(buf.Bytes()[0:bufsize]); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (c *ClientConn) ClientFence(flags uint32, p []byte) error {
-    c.send.Lock()
-    defer c.send.Unlock()
+	c.send.Lock()
+	defer c.send.Unlock()
 
-    buf := bytes.NewBuffer(make([]byte, 0, 9))
+	buf := bytes.NewBuffer(make([]byte, 0, 9))
 
-    data := []interface{}{
-            uint8(248),         //CARD8 type;
-            uint8(0),           //CARD8 pad1;
-            uint8(0),           //CARD8 pad2;
-            uint8(0),           //CARD8 pad3;
-            flags,              //CARD32 flags;
-            uint8(len(p)),      //CARD8 length
-            p,
-    }
+	data := []interface{}{
+		uint8(248),         //CARD8 type;
+		uint8(0),           //CARD8 pad1;
+		uint8(0),           //CARD8 pad2;
+		uint8(0),           //CARD8 pad3;
+		flags,              //CARD32 flags;
+		uint8(len(p)),      //CARD8 length
+		p,
+	}
 
-    for _, val := range data {
-            if err := binary.Write(buf, binary.BigEndian, val); err != nil {
-                    return err
-            }
-    }
+	for _, val := range data {
+		if err := binary.Write(buf, binary.BigEndian, val); err != nil {
+			return err
+		}
+	}
 
-    if _, err := c.c.Write(buf.Bytes()[0:9+len(p)]); err != nil {
-            return err
-    }
+	if _, err := c.c.Write(buf.Bytes()[0:9+len(p)]); err != nil {
+		return err
+	}
 
-    return nil
+	return nil
 }
 
 func (c *ClientConn) EnableContinuousUpdates(enabled bool, x,y,w,h uint16) error {
-    c.send.Lock()
-    defer c.send.Unlock()
+	c.send.Lock()
+	defer c.send.Unlock()
 
-    buf := bytes.NewBuffer(make([]byte, 0, 10))
+	buf := bytes.NewBuffer(make([]byte, 0, 10))
 
-    data := []interface{}{
-	    uint8(150),		//CARD8 type
-	    uint8(1),	//CARD8 enabled
-	    x,			//CARD16 x
-	    y,			//CARD16 y
-	    w,			//CARD16 w
-	    h,			//CARD16 h
-    }
+	data := []interface{}{
+		uint8(150),		//CARD8 type
+		uint8(1),	//CARD8 enabled
+		x,			//CARD16 x
+		y,			//CARD16 y
+		w,			//CARD16 w
+		h,			//CARD16 h
+	}
 
-    for _, val := range data {
-	    if err := binary.Write(buf, binary.BigEndian, val); err != nil {
-		    return err
-	    }
-    }
+	for _, val := range data {
+		if err := binary.Write(buf, binary.BigEndian, val); err != nil {
+			return err
+		}
+	}
 
-    if _, err := c.c.Write(buf.Bytes()[0:10]); err != nil {
-	    return err
-    }
+	if _, err := c.c.Write(buf.Bytes()[0:10]); err != nil {
+		return err
+	}
 
-    return nil
+	return nil
 }
 
 // FramebufferUpdateRequest requests a framebuffer update from the server.
