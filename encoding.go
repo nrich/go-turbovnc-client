@@ -134,7 +134,6 @@ func (*LastRect) Read(c *ClientConn, rect *Rectangle, r io.Reader) (Encoding, er
 }
 
 type NewFBSize struct {
-
 }
 
 func (*NewFBSize) Size() int {
@@ -147,6 +146,74 @@ func (*NewFBSize) Type() int32 {
 
 func (*NewFBSize) Read(c *ClientConn, rect *Rectangle, r io.Reader) (Encoding, error) {
 	return &NewFBSize{}, nil
+}
+
+type ScreenInfo struct {
+	Id uint32
+	X uint16
+	Y uint16
+	Width uint16
+	Height uint16
+	Flags uint32
+}
+
+type ExtendedDesktopSize struct {
+	ScreenCount uint8
+	Screens []ScreenInfo
+}
+
+func (*ExtendedDesktopSize) Size() int {
+	return 0
+}
+
+func (*ExtendedDesktopSize) Type() int32 {
+	return -308
+}
+
+func (*ExtendedDesktopSize) Read(c *ClientConn, rect *Rectangle, r io.Reader) (Encoding, error) {
+	var numScreens uint8
+	var padding [3]int8
+	var screens []ScreenInfo
+
+	if err := binary.Read(r, binary.BigEndian, &numScreens); err != nil {
+		return nil, err
+	}
+
+	if err := binary.Read(r, binary.BigEndian, &padding); err != nil {
+		return nil, err
+	}
+
+	if numScreens > 0 {
+		screens = make([]ScreenInfo, numScreens)
+
+		for i := uint8(0); i < numScreens; i++ {
+			if err := binary.Read(r, binary.BigEndian, &screens[i].Id); err != nil {
+				return nil, err
+			}
+
+			if err := binary.Read(r, binary.BigEndian, &screens[i].X); err != nil {
+				return nil, err
+			}
+
+			if err := binary.Read(r, binary.BigEndian, &screens[i].Y); err != nil {
+				return nil, err
+			}
+
+			if err := binary.Read(r, binary.BigEndian, &screens[i].Width); err != nil {
+				return nil, err
+			}
+
+			if err := binary.Read(r, binary.BigEndian, &screens[i].Height); err != nil {
+				return nil, err
+			}
+
+			if err := binary.Read(r, binary.BigEndian, &screens[i].Flags); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return &ExtendedDesktopSize{numScreens, screens}, nil
 }
 
 type DesktopName struct {
