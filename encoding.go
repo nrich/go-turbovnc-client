@@ -319,18 +319,22 @@ func (*RichCursor) Read(c *ClientConn, rect *Rectangle, r io.Reader) (Encoding, 
 //
 // See RFC 6143 Section 7.7.1
 type RawEncoding struct {
-	Colors []Color
+	Colors []ColorAlpha
 }
 
 func (r *RawEncoding) Size() int {
-	return len(r.Colors) * 3
+	return len(r.Colors) * 4
 }
 
 func (*RawEncoding) Type() int32 {
 	return 0
 }
 
-func (*RawEncoding) Read(c *ClientConn, rect *Rectangle, r io.Reader) (Encoding, error) {
+func (re *RawEncoding) Read(c *ClientConn, rect *Rectangle, r io.Reader) (Encoding, error) {
+        if c.PixelFormat.BPP == 32 {
+		return re.ReadQuick(c, rect, r)
+        }
+
 	bytesPerPixel := c.PixelFormat.BPP / 8
 
 	// Various housekeeping helpers
@@ -341,7 +345,7 @@ func (*RawEncoding) Read(c *ClientConn, rect *Rectangle, r io.Reader) (Encoding,
 	}
 
 	// Output buffer
-	colors := make([]Color, rect.Area())
+	colors := make([]ColorAlpha, rect.Area())
 
 	// Read all needed bytes: this improves performance so we
 	// don't have to do piecemeal unbuffered reads.
@@ -372,12 +376,33 @@ func (*RawEncoding) Read(c *ClientConn, rect *Rectangle, r io.Reader) (Encoding,
 				color.G = uint8((rawPixel >> c.PixelFormat.GreenShift) & uint32(c.PixelFormat.GreenMax))
 				color.B = uint8((rawPixel >> c.PixelFormat.BlueShift) & uint32(c.PixelFormat.BlueMax))
 			} else {
-				*color = c.ColorMap[rawPixel]
+				//*color = c.ColorMap[rawPixel]
+				c := c.ColorMap[rawPixel]
+				*color = ColorAlpha{c.R, c.G, c.B, 255}
 			}
 		}
 	}
 
 	return &RawEncoding{colors}, nil
+}
+
+func (*RawEncoding) ReadQuick(c *ClientConn, rect *Rectangle, r io.Reader) (Encoding, error) {
+        bytesPerPixel := c.PixelFormat.BPP / 8
+
+        // Read all needed bytes: this improves performance so we
+        // don't have to do piecemeal unbuffered reads.
+        buf := make([]byte, rect.Area()*int(bytesPerPixel))
+        if _, err := io.ReadFull(r, buf); err != nil {
+                return nil, err
+        }
+
+        qbuf := NewQuickBuf(buf)
+        colors,err := qbuf.ReadColorsAlpha(rect.Area())
+        if err != nil {
+		panic(err)
+        }
+
+        return &RawEncoding{colors}, nil
 }
 
 // ZRLEEncoding is Zlib run-length encoded pixel data

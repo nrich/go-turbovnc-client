@@ -46,6 +46,26 @@ func (b *QuickBuf) ReadColors(n int) ([]Color, error) {
 	return colors, nil
 }
 
+func (b *QuickBuf) ReadColorsAlpha(n int) ([]ColorAlpha, error) {
+	skip := colorAlphaSize * n
+	if b.off+skip > len(b.buf) {
+		return nil, io.EOF
+	}
+	ptr := unsafe.Pointer(&b.buf[b.off])
+
+	// Convert memory into a Color slice without copying
+	// (https://github.com/golang/go/issues/13656#issuecomment-165618599)
+	h := reflect.SliceHeader{
+		Data: uintptr(ptr),
+		Len:  n,
+		Cap:  n,
+	}
+	colors := *(*[]ColorAlpha)(unsafe.Pointer(&h))
+
+	b.off += skip
+	return colors, nil
+}
+
 func (b *QuickBuf) ReadColor() (Color, error) {
 	c := Color{
 		R: b.buf[b.off],
@@ -55,5 +75,17 @@ func (b *QuickBuf) ReadColor() (Color, error) {
 	b.off += colorSize
 	return c, nil
 }
+
+func (b *QuickBuf) ReadColorAlpha() (ColorAlpha, error) {
+	c := ColorAlpha{
+		R: b.buf[b.off],
+		G: b.buf[b.off+1],
+		B: b.buf[b.off+2],
+		A: b.buf[b.off+3],
+	}
+	b.off += colorAlphaSize
+	return c, nil
+}
+
 
 func NewQuickBuf(buf []byte) *QuickBuf { return &QuickBuf{buf: buf} }
